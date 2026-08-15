@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String      @id @default(uuid())
+  email                String      @unique
+  master_password_hash String
+  encryption_salt      String      // Base64 32-byte salt
+  settings             String      @default("{\"theme\":\"light\",\"reminder_email\":true,\"review_interval\":30}")
+  created_at           DateTime    @default(now())
+  updated_at           DateTime    @updatedAt
+  last_active_at       DateTime?
+
+  items                Item[]
+  locations            Location[]
+  reminders            Reminder[]
+  audit_logs           AuditLog[]
+  sync_metadata        SyncMetadata?
+
+  @@index([email])
+}
+
+model Item {
+  id                 String     @id @default(uuid())
+  user_id            String
+  user               User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  title              String
+  category           String     // identity, education, money, digital, assets, government, other
+  subcategory        String?
+  status             String     @default("missing") // complete, missing, needs_attention, not_applicable
+  description        String?
+  notes              String?
+  tags               String     @default("[]") // JSON string array
+  
+  // Vault / Location data
+  physical_location  String?
+  digital_copy_uri   String?
+  location_id        String?
+  location           Location?  @relation(fields: [location_id], references: [id], onDelete: SetNull)
+
+  // Temporal metadata
+  expiry_date        String?    // YYYY-MM-DD
+  reminder_date      String?    // YYYY-MM-DD
+  last_reviewed_at   DateTime?
+
+  // Client-side zero-knowledge encrypted payload
+  sensitive_data     String?    // Encrypted Base64 string payload
+
+  // Optimistic locking / Lamport version
+  version            Int        @default(1)
+  created_at         DateTime   @default(now())
+  updated_at         DateTime   @updatedAt
+
+  reminders          Reminder[]
+
+  @@index([user_id])
+  @@index([category])
+  @@index([status])
+  @@index([expiry_date])
+  @@index([reminder_date])
+}
+
+model Location {
+  id           String   @id @default(uuid())
+  user_id      String
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  name         String
+  type         String   // physical, digital, cloud, other
+  description  String?
+  address      String?
+  uri_template String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  items        Item[]
+
+  @@index([user_id])
+}
+
+model Reminder {
+  id             String    @id @default(uuid())
+  user_id        String
+  user           User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  item_id        String
+  item           Item      @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  type           String    // expiry, renewal, review, custom
+  scheduled_date String    // YYYY-MM-DD
+  triggered      Boolean   @default(false)
+  acknowledged   Boolean   @default(false)
+  sent_at        DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  @@index([user_id])
+  @@index([scheduled_date])
+  @@index([item_id])
+}
+
+model SyncMetadata {
+  user_id            String   @id
+  user               User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  last_sync_at       DateTime @default(now())
+  local_version      Int      @default(0)
+  pending_operations String   @default("[]") // JSON string of operations
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  user_id    String?
+  user       User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  action     String   // login, register, item_create, item_update, etc.
+  ip_address String?
+  user_agent String?
+  metadata   String?  // JSON string
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@index([created_at])
+}
