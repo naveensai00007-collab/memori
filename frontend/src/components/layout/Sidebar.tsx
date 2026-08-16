@@ -2,7 +2,6 @@ import React from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useLifeStats } from '../../hooks/useItems';
 import { CATEGORIES } from '../../lib/constants';
-import { Category } from '../../../../shared/types';
 import { 
   Layers, 
   ShieldCheck, 
@@ -41,49 +40,49 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed inset-y-0 left-0 z-40 flex flex-col border-r border-memori-border bg-memori-surface pt-16 transition-all duration-200 md:static md:z-0',
-        isSidebarCollapsed ? 'w-18' : 'w-64',
+        'fixed inset-y-0 left-0 z-40 flex flex-col border-r border-memori-border bg-memori-surface pt-14 transition-all duration-150 md:static md:z-0 select-none',
+        isSidebarCollapsed ? 'w-16' : 'w-60',
         !isSidebarCollapsed && 'shadow-lg md:shadow-none'
       )}
     >
       <div className="flex flex-col flex-1 overflow-y-auto p-3 space-y-6">
-        {/* Main Categories */}
+        {/* Main Categories / Domains */}
         <div>
-          <div className="flex items-center justify-between px-3 mb-2">
+          <div className="flex items-center justify-between px-2.5 mb-2">
             {!isSidebarCollapsed && (
-              <span className="text-[11px] font-bold uppercase tracking-wider text-memori-tertiary">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-memori-tertiary">
                 Life Domains
               </span>
             )}
             <button
               onClick={() => setSidebarCollapsed(!isSidebarCollapsed)}
-              className="hidden md:flex rounded p-1 text-memori-tertiary hover:bg-memori-bg hover:text-primary transition-colors"
+              className="hidden md:flex rounded-btn p-1 text-memori-tertiary hover:bg-memori-subtle hover:text-primary transition-colors"
               title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
             >
-              {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+              {isSidebarCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
             </button>
           </div>
 
-          <nav className="space-y-1">
+          <nav className="space-y-0.5">
             {/* All Items Option */}
             <Link
               to="/dashboard"
               onClick={() => setSelectedCategory(null)}
               className={cn(
-                'flex items-center justify-between rounded-btn px-3 py-2.5 text-sm font-medium transition-colors',
+                'flex items-center justify-between rounded-btn px-2.5 py-2 text-xs font-medium transition-all duration-100',
                 isDashboard && selectedCategory === null
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'text-memori-secondary hover:bg-memori-bg hover:text-primary'
+                  ? 'bg-primary text-white font-semibold'
+                  : 'text-memori-secondary hover:bg-memori-subtle hover:text-primary'
               )}
             >
-              <div className="flex items-center gap-3">
-                <Layers className="w-4 h-4 shrink-0" />
+              <div className="flex items-center gap-2.5">
+                <Layers className="w-3.5 h-3.5 shrink-0" />
                 {!isSidebarCollapsed && <span>All Life Map</span>}
               </div>
               {!isSidebarCollapsed && stats && (
                 <span className={cn(
-                  'rounded-full px-2 py-0.5 text-xs font-semibold',
-                  selectedCategory === null && isDashboard ? 'bg-white/20 text-white' : 'bg-memori-bg text-memori-secondary'
+                  'rounded px-1.5 py-0.2 text-[10px] font-mono',
+                  selectedCategory === null && isDashboard ? 'bg-white/15 text-white' : 'text-memori-tertiary'
                 )}>
                   {stats.total_items}
                 </span>
@@ -102,21 +101,21 @@ export function Sidebar() {
                   to="/dashboard"
                   onClick={() => setSelectedCategory(cat.id)}
                   className={cn(
-                    'flex items-center justify-between rounded-btn px-3 py-2.5 text-sm font-medium transition-colors',
+                    'flex items-center justify-between rounded-btn px-2.5 py-2 text-xs font-medium transition-all duration-100',
                     isSelected
-                      ? 'bg-primary text-white shadow-xs'
-                      : 'text-memori-secondary hover:bg-memori-bg hover:text-primary'
+                      ? 'bg-primary text-white font-semibold'
+                      : 'text-memori-secondary hover:bg-memori-subtle hover:text-primary'
                   )}
                   title={cat.label}
                 >
-                  <div className="flex items-center gap-3 truncate">
-                    <IconComponent className="w-4 h-4 shrink-0" />
+                  <div className="flex items-center gap-2.5 truncate">
+                    <IconComponent className="w-3.5 h-3.5 shrink-0" />
                     {!isSidebarCollapsed && <span className="truncate">{cat.label}</span>}
                   </div>
                   {!isSidebarCollapsed && count > 0 && (
                     <span className={cn(
-                      'rounded-full px-2 py-0.5 text-xs font-semibold',
-                      isSelected ? 'bg-white/20 text-white' : 'bg-memori-bg text-memori-secondary'
+                      'rounded px-1.5 py-0.2 text-[10px] font-mono',
+                      isSelected ? 'bg-white/15 text-white' : 'text-memori-tertiary'
                     )}>
                       {count}
                     </span>
@@ -127,53 +126,53 @@ export function Sidebar() {
           </nav>
         </div>
 
-        {/* Vault & Organization System */}
+        {/* Vault Index & Systems */}
         <div>
           {!isSidebarCollapsed && (
-            <div className="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-memori-tertiary">
-              Vault & Index
+            <div className="px-2.5 mb-2 text-[10px] font-bold uppercase tracking-wider text-memori-tertiary">
+              Vault System
             </div>
           )}
-          <nav className="space-y-1">
+          <nav className="space-y-0.5">
             <Link
               to="/locations"
               className={cn(
-                'flex items-center gap-3 rounded-btn px-3 py-2.5 text-sm font-medium transition-colors',
+                'flex items-center gap-2.5 rounded-btn px-2.5 py-2 text-xs font-medium transition-all duration-100',
                 location.pathname === '/locations'
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'text-memori-secondary hover:bg-memori-bg hover:text-primary'
+                  ? 'bg-primary text-white font-semibold'
+                  : 'text-memori-secondary hover:bg-memori-subtle hover:text-primary'
               )}
-              title="Vault Index (Locations)"
+              title="Vault Index"
             >
-              <Vault className="w-4 h-4 shrink-0" />
+              <Vault className="w-3.5 h-3.5 shrink-0" />
               {!isSidebarCollapsed && <span>Vault Index</span>}
             </Link>
 
             <Link
               to="/reminders"
               className={cn(
-                'flex items-center gap-3 rounded-btn px-3 py-2.5 text-sm font-medium transition-colors',
+                'flex items-center gap-2.5 rounded-btn px-2.5 py-2 text-xs font-medium transition-all duration-100',
                 location.pathname === '/reminders'
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'text-memori-secondary hover:bg-memori-bg hover:text-primary'
+                  ? 'bg-primary text-white font-semibold'
+                  : 'text-memori-secondary hover:bg-memori-subtle hover:text-primary'
               )}
               title="Smart Reminders"
             >
-              <Bell className="w-4 h-4 shrink-0" />
+              <Bell className="w-3.5 h-3.5 shrink-0" />
               {!isSidebarCollapsed && <span>Smart Reminders</span>}
             </Link>
 
             <Link
               to="/settings"
               className={cn(
-                'flex items-center gap-3 rounded-btn px-3 py-2.5 text-sm font-medium transition-colors',
+                'flex items-center gap-2.5 rounded-btn px-2.5 py-2 text-xs font-medium transition-all duration-100',
                 location.pathname === '/settings'
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'text-memori-secondary hover:bg-memori-bg hover:text-primary'
+                  ? 'bg-primary text-white font-semibold'
+                  : 'text-memori-secondary hover:bg-memori-subtle hover:text-primary'
               )}
               title="Settings & Export"
             >
-              <Settings className="w-4 h-4 shrink-0" />
+              <Settings className="w-3.5 h-3.5 shrink-0" />
               {!isSidebarCollapsed && <span>Settings</span>}
             </Link>
           </nav>

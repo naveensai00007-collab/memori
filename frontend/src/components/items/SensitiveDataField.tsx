@@ -2,196 +2,187 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { encryptSensitive, decryptSensitive } from '../../lib/encryption';
 import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Lock, Unlock, Eye, EyeOff, Plus, Trash2, ShieldCheck, Key } from 'lucide-react';
+import { Lock, Plus, Trash2, ShieldCheck } from 'lucide-react';
+
+interface KeyValuePair {
+  key: string;
+  value: string;
+}
 
 export function SensitiveDataField({
-  encryptedPayload,
+  value,
   onChange,
-  suggestedFields = [],
+  isEditing = false,
 }: {
-  encryptedPayload?: string | null;
-  onChange: (newEncryptedPayload: string) => void;
-  suggestedFields?: { key: string; label: string; placeholder: string }[];
+  value?: string | null;
+  onChange?: (encryptedValue: string) => void;
+  isEditing?: boolean;
 }) {
   const { encryptionPassword, user } = useAuthStore();
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [fields, setFields] = useState<Record<string, string>>({});
-  const [tempPassword, setTempPassword] = useState('');
+  const [pairs, setPairs] = useState<KeyValuePair[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [isEncrypting, setIsEncrypting] = useState(false);
 
-  const activePassword = encryptionPassword || tempPassword;
-
-  // Decrypt when unlocked
-  const handleUnlock = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!activePassword) {
-      setError('Master password is required to decrypt.');
-      return;
-    }
-    if (!user?.encryption_salt) {
-      setError('Missing encryption salt.');
-      return;
-    }
-
-    try {
-      setError(null);
-      if (encryptedPayload && encryptedPayload.trim()) {
-        const decrypted = await decryptSensitive(encryptedPayload, activePassword, user.encryption_salt);
-        setFields(decrypted);
-      } else {
-        setFields({});
-      }
-      setIsUnlocked(true);
-    } catch (err) {
-      setError('Decryption failed. Incorrect master password.');
-    }
-  };
-
-  // Automatically attempt unlock if encryptionPassword is already held in memory
+  // Decrypt when value or password is ready
   useEffect(() => {
-    if (encryptionPassword && user?.encryption_salt && !isUnlocked && encryptedPayload) {
-      handleUnlock();
-    }
-  }, [encryptionPassword, user]);
+    let isMounted = true;
+    async function performDecrypt() {
+      if (!value) {
+        setPairs([]);
+        return;
+      }
 
-  const handleFieldChange = async (key: string, value: string) => {
-    const updated = { ...fields, [key]: value };
-    if (!value.trim()) {
-      delete updated[key];
-    }
-    setFields(updated);
+      if (!encryptionPassword || !user?.encryption_salt) {
+        return;
+      }
 
-    if (activePassword && user?.encryption_salt) {
-      setIsEncrypting(true);
       try {
-        const encrypted = await encryptSensitive(updated, activePassword, user.encryption_salt);
-        onChange(encrypted);
-      } finally {
-        setIsEncrypting(false);
+        const decryptedObj = await decryptSensitive(value, encryptionPassword, user.encryption_salt);
+        if (isMounted) {
+          const formattedPairs = Object.entries(decryptedObj).map(([k, v]) => ({
+            key: k,
+            value: String(v),
+          }));
+          setPairs(formattedPairs);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError('Decryption failed. Verify your encryption key.');
+        }
       }
     }
-  };
 
-  const handleAddField = (key: string) => {
-    if (!fields[key]) {
-      setFields({ ...fields, [key]: '' });
-    }
-  };
+    performDecrypt();
+    return () => {
+      isMounted = false;
+    };
+  }, [value, encryptionPassword, user?.encryption_salt]);
 
-  const handleRemoveField = async (key: string) => {
-    const updated = { ...fields };
-    delete updated[key];
-    setFields(updated);
+  // Handle updates during edit mode
+  const handlePairChange = async (index: number, field: 'key' | 'value', text: string) => {
+    const updated = [...pairs];
+    updated[index][field] = text;
+    setPairs(updated);
 
-    if (activePassword && user?.encryption_salt) {
-      const encrypted = await encryptSensitive(updated, activePassword, user.encryption_salt);
+    if (onChange && encryptionPassword && user?.encryption_salt) {
+      const obj: Record<string, string> = {};
+      updated.forEach(p => {
+        if (p.key.trim()) {
+          obj[p.key.trim()] = p.value;
+        }
+      });
+      const encrypted = await encryptSensitive(obj, encryptionPassword, user.encryption_salt);
       onChange(encrypted);
     }
   };
 
+  const addPair = () => {
+    setPairs([...pairs, { key: '', value: '' }]);
+  };
+
+  const removePair = async (index: number) => {
+    const updated = pairs.filter((_, i) => i !== index);
+    setPairs(updated);
+
+    if (onChange && encryptionPassword && user?.encryption_salt) {
+      const obj: Record<string, string> = {};
+      updated.forEach(p => {
+        if (p.key.trim()) {
+          obj[p.key.trim()] = p.value;
+        }
+      });
+      const encrypted = await encryptSensitive(obj, encryptionPassword, user.encryption_salt);
+      onChange(encrypted);
+    }
+  };
+
+  if (!isEditing && !value) {
+    return (
+      <div className="text-xs text-memori-tertiary font-serif italic">
+        No zero-knowledge encrypted attributes recorded for this item.
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-card border border-memori-border bg-memori-bg/50 p-4 space-y-3">
+    <div className="space-y-3 rounded-btn border border-memori-border/80 bg-memori-bg/50 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="rounded-full bg-emerald-100 p-1.5 text-emerald-800">
-            <Lock className="w-4 h-4" />
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-primary">Zero-Knowledge Encrypted Secrets</h4>
-            <p className="text-[11px] text-memori-secondary">
-              Encrypted in your browser with AES-GCM-256 before leaving your device.
-            </p>
-          </div>
-        </div>
-
-        {isUnlocked && (
-          <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Decrypted Locally
+          <Lock className="w-3.5 h-3.5 text-emerald-800" />
+          <span className="text-xs font-bold uppercase tracking-wider text-primary font-mono">
+            Zero-Knowledge Encrypted Secrets
           </span>
-        )}
+        </div>
+        <span className="text-[10px] text-emerald-800 font-mono flex items-center gap-1">
+          <ShieldCheck className="w-3 h-3" />
+          AES-GCM-256
+        </span>
       </div>
 
-      {!isUnlocked ? (
-        <div className="pt-2">
-          {encryptedPayload ? (
-            <div className="flex flex-col sm:flex-row items-center gap-2">
-              <input
-                type="password"
-                placeholder="Enter master password to unlock secrets..."
-                value={tempPassword}
-                onChange={(e) => setTempPassword(e.target.value)}
-                className="h-10 w-full rounded-input border border-memori-border bg-memori-surface px-3 text-xs focus:border-accent focus:outline-none"
-              />
-              <Button type="button" size="sm" onClick={() => handleUnlock()} className="whitespace-nowrap w-full sm:w-auto">
-                <Unlock className="w-3.5 h-3.5 mr-1" />
-                Unlock Secrets
-              </Button>
-            </div>
-          ) : (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setIsUnlocked(true);
-              }}
-              className="gap-1.5"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Encrypted Sensitive Fields
-            </Button>
-          )}
+      {error && (
+        <div className="text-xs text-rose-800 font-mono bg-rose-50 p-2 rounded">
+          {error}
+        </div>
+      )}
 
-          {error && <p className="text-xs text-memori-error font-medium mt-1">{error}</p>}
+      {isEditing ? (
+        <div className="space-y-2 pt-1">
+          {pairs.map((pair, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Field name (e.g. Passport Number, Policy ID)"
+                value={pair.key}
+                onChange={(e) => handlePairChange(idx, 'key', e.target.value)}
+                className="w-2/5 h-8 rounded-input border border-memori-border bg-memori-surface px-2.5 text-xs text-memori-text focus:border-accent focus:outline-none"
+              />
+              <input
+                type="text"
+                placeholder="Encrypted secret value"
+                value={pair.value}
+                onChange={(e) => handlePairChange(idx, 'value', e.target.value)}
+                className="flex-1 h-8 rounded-input border border-memori-border bg-memori-surface px-2.5 text-xs font-mono text-memori-text focus:border-accent focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => removePair(idx)}
+                className="p-1 text-memori-tertiary hover:text-memori-error rounded"
+                title="Remove Secret"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={addPair}
+            className="gap-1 text-xs h-7 mt-1"
+          >
+            <Plus className="w-3 h-3" />
+            <span>Add Encrypted Secret</span>
+          </Button>
         </div>
       ) : (
-        <div className="space-y-3 pt-2">
-          {/* List of active fields */}
-          {Object.entries(fields).map(([k, v]) => {
-            const fieldMeta = suggestedFields.find(s => s.key === k);
-            return (
-              <div key={k} className="flex items-center gap-2">
-                <div className="flex-1">
-                  <Input
-                    label={fieldMeta?.label || k.replace(/_/g, ' ').toUpperCase()}
-                    value={v}
-                    onChange={(e) => handleFieldChange(k, e.target.value)}
-                    placeholder={fieldMeta?.placeholder || `Enter ${k}...`}
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveField(k)}
-                  className="mt-6 p-2 text-memori-tertiary hover:text-memori-error transition-colors"
-                  title="Remove Field"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+        <div className="space-y-2 pt-1">
+          {pairs.length > 0 ? (
+            pairs.map((pair, idx) => (
+              <div
+                key={idx}
+                className="flex items-baseline justify-between rounded bg-memori-surface p-2.5 border border-memori-border/60 text-xs"
+              >
+                <span className="font-semibold text-memori-secondary text-[11px] uppercase tracking-wider">
+                  {pair.key}:
+                </span>
+                <span className="font-mono text-primary font-bold selection:bg-accent/40">
+                  {pair.value}
+                </span>
               </div>
-            );
-          })}
-
-          {/* Suggested field triggers */}
-          {suggestedFields.filter(s => !(s.key in fields)).length > 0 && (
-            <div className="pt-2 border-t border-memori-border/50">
-              <span className="text-[11px] font-medium text-memori-secondary block mb-1.5">
-                Suggested Encrypted Attributes:
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {suggestedFields.filter(s => !(s.key in fields)).map(s => (
-                  <button
-                    key={s.key}
-                    type="button"
-                    onClick={() => handleAddField(s.key)}
-                    className="rounded-full border border-memori-border bg-memori-surface px-2.5 py-0.5 text-xs text-memori-text hover:border-accent hover:text-accent-dark transition-colors"
-                  >
-                    + {s.label}
-                  </button>
-                ))}
-              </div>
+            ))
+          ) : (
+            <div className="text-xs text-memori-secondary italic">
+              Encrypted payload stored securely. Decrypting...
             </div>
           )}
         </div>

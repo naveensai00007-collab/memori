@@ -10,21 +10,21 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading = false, children, disabled, ...props }, ref) => {
-    const baseStyles = "inline-flex items-center justify-center font-medium rounded-btn transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-memori-bg disabled:opacity-50 disabled:cursor-not-allowed select-none";
+    const baseStyles = "inline-flex items-center justify-center font-medium rounded-btn transition-all duration-120 active:scale-[0.99] focus:outline-none focus:ring-1.5 focus:ring-accent focus:ring-offset-1 focus:ring-offset-memori-bg disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 select-none";
 
     const variants = {
-      primary: "bg-primary text-white hover:bg-primary-light active:bg-primary-dark shadow-sm",
-      secondary: "bg-transparent border border-memori-border text-primary hover:bg-black/5 active:bg-black/10",
-      accent: "bg-accent text-primary font-semibold hover:bg-accent-dark hover:text-white active:bg-accent-dark shadow-sm",
-      ghost: "bg-transparent text-memori-secondary hover:bg-black/5 hover:text-primary",
-      destructive: "bg-memori-error text-white hover:bg-red-700 active:bg-red-800 shadow-sm",
+      primary: "bg-primary text-white hover:bg-primary-light active:bg-primary-dark shadow-subtle",
+      secondary: "bg-memori-surface border border-memori-border text-memori-text hover:bg-memori-subtle hover:border-memori-borderHover active:bg-memori-border/60 shadow-subtle",
+      accent: "bg-accent text-white font-semibold hover:bg-accent-dark active:bg-accent-dark shadow-subtle",
+      ghost: "bg-transparent text-memori-secondary hover:bg-memori-subtle hover:text-memori-text",
+      destructive: "bg-memori-error text-white hover:bg-red-800 active:bg-red-900 shadow-subtle",
     };
 
     const sizes = {
-      sm: "h-9 px-3 text-xs gap-1.5",
-      md: "h-12 px-5 text-sm gap-2",
-      lg: "h-14 px-7 text-base gap-2.5",
-      icon: "h-10 w-10 p-0 rounded-full",
+      sm: "h-8 px-3 text-xs gap-1.5",
+      md: "h-10 px-4 text-xs tracking-tight gap-2",
+      lg: "h-12 px-6 text-sm gap-2.5",
+      icon: "h-9 w-9 p-0 rounded-btn",
     };
 
     return (

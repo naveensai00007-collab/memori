@@ -9,76 +9,52 @@ import { EmptyState } from '../components/dashboard/EmptyState';
 import { ItemDetailModal } from '../components/items/ItemDetail';
 import { ItemForm } from '../components/items/ItemForm';
 import { LifeReviewModal } from '../components/modals/LifeReviewModal';
-import { LocationForm } from '../components/locations/LocationForm';
 import { Skeleton } from '../components/ui/Skeleton';
 
 export function DashboardPage() {
-  const { selectedCategory, selectedStatus, searchQuery, setSelectedStatus, setSearchQuery } = useUIStore();
-  
-  const { data: itemsData, isLoading, isError, refetch } = useItems({
+  const { selectedCategory, searchQuery, selectedStatus } = useUIStore();
+  const { data: itemsData, isLoading } = useItems({
     category: selectedCategory || undefined,
-    status: selectedStatus || undefined,
     search: searchQuery || undefined,
+    status: selectedStatus || undefined,
   });
+  const { data: stats } = useLifeStats();
 
-  const { data: statsData } = useLifeStats();
-
-  const [inspectingItem, setInspectingItem] = useState<Item | null>(null);
+  const [activeItem, setActiveItem] = useState<Item | null>(null);
 
   const items = itemsData?.items || [];
-  const hasActiveFilters = !!(selectedStatus || searchQuery);
 
   return (
-    <div className="space-y-6">
-      {/* Top Life Map Completeness & Stats */}
-      <StatsPanel stats={statsData} />
+    <div className="space-y-6 pb-12">
+      {/* Aggregated Completeness & Urgency Index */}
+      <StatsPanel stats={stats} />
 
-      {/* Filter & Category Header */}
-      <FilterBar totalResults={itemsData?.total} />
+      {/* Filter and Density Toolbar */}
+      <FilterBar />
 
-      {/* Main Items Grid */}
+      {/* Item Grid / List */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="rounded-card border border-memori-border bg-memori-surface p-5 space-y-3">
+            <div key={i} className="rounded-card border border-memori-border bg-memori-surface p-4 space-y-3">
               <div className="flex justify-between">
-                <Skeleton className="h-5 w-20" />
-                <Skeleton className="h-5 w-16" />
-              </div>
-              <Skeleton className="h-6 w-3/4" />
-              <Skeleton className="h-4 w-full" />
-              <div className="pt-3 border-t border-memori-border/50 flex gap-2">
-                <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-16" />
               </div>
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-8 w-full" />
             </div>
           ))}
         </div>
-      ) : isError ? (
-        <div className="rounded-card border border-red-200 bg-red-50 p-6 text-center space-y-3">
-          <p className="text-sm text-memori-error font-medium">Failed to load Life Map items.</p>
-          <button
-            onClick={() => refetch()}
-            className="rounded-btn bg-primary text-white px-4 py-2 text-xs font-semibold hover:bg-primary-light"
-          >
-            Retry
-          </button>
-        </div>
       ) : items.length === 0 ? (
-        <EmptyState
-          hasFilters={hasActiveFilters}
-          onResetFilters={() => {
-            setSelectedStatus(null);
-            setSearchQuery('');
-          }}
-        />
+        <EmptyState />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((item) => (
+          {items.map((item: Item) => (
             <ItemCard
               key={item.id}
               item={item}
-              onClick={() => setInspectingItem(item)}
+              onClick={() => setActiveItem(item)}
             />
           ))}
         </div>
@@ -86,13 +62,12 @@ export function DashboardPage() {
 
       {/* Modals */}
       <ItemDetailModal
-        item={inspectingItem}
-        open={!!inspectingItem}
-        onClose={() => setInspectingItem(null)}
+        item={activeItem}
+        isOpen={Boolean(activeItem)}
+        onClose={() => setActiveItem(null)}
       />
       <ItemForm />
       <LifeReviewModal />
-      <LocationForm />
     </div>
   );
 }
